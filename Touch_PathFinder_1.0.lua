@@ -76,15 +76,15 @@ function PF_LoadPath(start, dest)
         end
 
         local function obstacleEncountered(neighbourMap)
+
+            Print("Obstacle")
+
             for kDir, vMap in pairs(neighbourMap) do
-                if lastDir ~= nil then
-                    if kDir ~= OppositeDirection(lastDir) then
-                        table.insert(memoryObstacle, { map = map:currentMapId(), dir = kDir })
-                        return kDir, vMap    
-                    end
-                else
-                    table.insert(memoryObstacle, { map = map:currentMapId(), dir = kDir })
-                    return kDir, vMap
+                Print(kDir)
+                Print(lastDir)
+                if kDir ~= lastDir then
+                    table.insert(memoryObstacle, { map = vMap, dir = kDir })
+                    return kDir, vMap    
                 end
             end
 
@@ -95,11 +95,11 @@ function PF_LoadPath(start, dest)
             --Print("Start : "..start.." ["..startX..","..startY.."]")
             --Print("Dest : "..dest.." ["..destX..","..destY.."]")    
 
-            --Dump(path, 250)
             if start == dest then
                 Print("Fin du pathFinding", "PathFinder")
                 PF_Info.loadedPath = path
                 PF_Info.dest = dest
+                Dump(path, 250)
                 return
             end
 
@@ -110,16 +110,18 @@ function PF_LoadPath(start, dest)
                 local nextDirY = string.lower(getNextDir("y"))
         
                 if axe == "x" then
-                    if tMapInfo.neighbourMap[nextDirX] ~= nil then
+                    if nextDirX ~= OppositeDirection(lastDir) and tMapInfo.neighbourMap[nextDirX] ~= nil then
                         table.insert(path, { map = tostring(start), path = tostring(nextDirX) })
+                        lastDir = nil
                         findNextMove(tMapInfo.neighbourMap[nextDirX], dest)
                     else
-                        --Print("neighbourMapX nil")
+                        Print("neighbourMapX nil")
                         if tMapInfo.neighbourMap[nextDirY] ~= nil then
                             table.insert(path, { map = tostring(start), path = tostring(nextDirY) })
+                            lastDir = nil
                             findNextMove(tMapInfo.neighbourMap[nextDirY], dest)    
                         else
-                            --Print("Obstacle sur le chemin le plus rapide X")
+                            Print("Obstacle sur le chemin le plus rapide X")
                             local nextDir, nextMap = obstacleEncountered(tMapInfo.neighbourMap)
                             table.insert(path, { map = tostring(start), path = tostring(nextDir) })
                             lastDir = nextDir
@@ -127,16 +129,18 @@ function PF_LoadPath(start, dest)
                         end
                     end
                 elseif axe == "y" then
-                    if tMapInfo.neighbourMap[nextDirY] ~= nil then
+                    if nextDirY ~= OppositeDirection(lastDir) and tMapInfo.neighbourMap[nextDirY] ~= nil then
                         table.insert(path, { map = tostring(start), path = tostring(nextDirY) })
+                        lastDir = nil
                         findNextMove(tMapInfo.neighbourMap[nextDirY], dest)
                     else
-                        --Print("neighbourMapY nil")
+                        Print("neighbourMapY nil")
                         if tMapInfo.neighbourMap[nextDirX] ~= nil then
                             table.insert(path, { map = tostring(start), path = tostring(nextDirX) })
+                            lastDir = nil
                             findNextMove(tMapInfo.neighbourMap[nextDirX], dest)
                         else
-                            --Print("Obstacle sur le chemin le plus rapide Y")
+                            Print("Obstacle sur le chemin le plus rapide Y")
                             local nextDir, nextMap = obstacleEncountered(tMapInfo.neighbourMap)
                             table.insert(path, { map = tostring(start), path = tostring(nextDir) })
                             lastDir = nextDir
@@ -234,6 +238,7 @@ function Dump(t, printDelay)
 end
 
 function OppositeDirection(dir)
+    dir = dir or ""
     if string.lower(dir) == "left" then
         return "right"
     elseif string.lower(dir) == "right" then
@@ -243,6 +248,7 @@ function OppositeDirection(dir)
     elseif string.lower(dir) == "bottom" then
         return "top"
     end
+    return ""
 end
 
 MAP_INFO = {
