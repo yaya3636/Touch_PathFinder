@@ -1,3 +1,7 @@
+local AnkatouchDirectory = "E:\\Dofusbotting\\AnkaBotTouch"
+
+local JSON = dofile("E:\\Dofusbotting\\Scripts\\Module\\JSON.lua")
+
 local PF_Info = {}
 PF_Info.loadedPath = {}
 
@@ -58,138 +62,109 @@ function PF_LoadPath(start, dest)
         local startX, startY = PF_MapIdToPos(start)
         local destX, destY = PF_MapIdToPos(dest)
         local lastDir
+        --Print(startX .. " " .. startY)
+        --Print(destX .. " " .. destY)
+
+        local function translateDir(dir)
+            if dir == "leftNeighbourId" then
+                return "left"
+            elseif dir == "rightNeighbourId" then
+                return "right"
+            elseif dir == "topNeighbourId" then
+                return "top"
+            elseif dir == "bottomNeighbourId" then
+                return "bottom"
+            end
+        end
 
         local function getNextDir(axe)
             if axe == "x" then
                 if startX > destX then
-                    return "Left"
-                else
-                    return "Right"
+                    return "leftNeighbourId"
+                elseif startX < destX then
+                    return "rightNeighbourId"
                 end
             elseif axe == "y" then
                 if startY > destY then
-                    return "Top"
-                else
-                    return "Bottom"
+                    return "topNeighbourId"
+                elseif startY < destY then
+                    return "bottomNeighbourId"
                 end
             end
         end
 
-        local function obstacleEncountered(neighbourMap)
-
-            Print("Obstacle")
-
-            for kDir, vMap in pairs(neighbourMap) do
-                Print(kDir)
-                Print(lastDir)
-                if kDir ~= lastDir then
-                    table.insert(memoryObstacle, { map = vMap, dir = kDir })
-                    return kDir, vMap    
-                end
-            end
-
-            Print("Pas de dir", "obstacleEncountered", "error")
-        end
-
-        local function findNextMove(start, dest)
-            --Print("Start : "..start.." ["..startX..","..startY.."]")
-            --Print("Dest : "..dest.." ["..destX..","..destY.."]")    
-
-            if start == dest then
-                Print("Fin du pathFinding", "PathFinder")
-                PF_Info.loadedPath = path
-                PF_Info.dest = dest
-                Dump(path, 250)
-                return
-            end
+        while start ~= dest do
+            local mapInfo = ReadMapInfo(start)
+            local nextDirX = getNextDir("x")
+            local nextDirY = getNextDir("y")
 
             startX, startY = PF_MapIdToPos(start)
 
-            local function getMove(axe, tMapInfo)
-                local nextDirX = string.lower(getNextDir("x"))
-                local nextDirY = string.lower(getNextDir("y"))
-        
-                if axe == "x" then
-                    if nextDirX ~= OppositeDirection(lastDir) and tMapInfo.neighbourMap[nextDirX] ~= nil then
-                        table.insert(path, { map = tostring(start), path = tostring(nextDirX) })
-                        lastDir = nil
-                        findNextMove(tMapInfo.neighbourMap[nextDirX], dest)
+            if startX ~= destX and startY ~= destY then
+                if Get_RandomNumber(0, 1) > 0 then -- x
+                    PF_PushMap(start, translateDir(nextDirX))
+                    if mapInfo[nextDirX] ~= nil then
+                        start = mapInfo[nextDirX]
+                    elseif mapInfo[nextDirY] ~= nil then
+                        start = mapInfo[nextDirY]
                     else
-                        Print("neighbourMapX nil")
-                        if tMapInfo.neighbourMap[nextDirY] ~= nil then
-                            table.insert(path, { map = tostring(start), path = tostring(nextDirY) })
-                            lastDir = nil
-                            findNextMove(tMapInfo.neighbourMap[nextDirY], dest)    
-                        else
-                            Print("Obstacle sur le chemin le plus rapide X")
-                            local nextDir, nextMap = obstacleEncountered(tMapInfo.neighbourMap)
-                            table.insert(path, { map = tostring(start), path = tostring(nextDir) })
-                            lastDir = nextDir
-                            findNextMove(nextMap, dest)
-                        end
+                        Print("Obstacle", "PF_LoadMove", "error")
                     end
-                elseif axe == "y" then
-                    if nextDirY ~= OppositeDirection(lastDir) and tMapInfo.neighbourMap[nextDirY] ~= nil then
-                        table.insert(path, { map = tostring(start), path = tostring(nextDirY) })
-                        lastDir = nil
-                        findNextMove(tMapInfo.neighbourMap[nextDirY], dest)
+                else -- y
+                    PF_PushMap(start, translateDir(nextDirY))
+                    if mapInfo[nextDirY] ~= nil then
+                        start = mapInfo[nextDirY]
+                    elseif mapInfo[nextDirX] ~= nil then
+                        start = mapInfo[nextDirX]
                     else
-                        Print("neighbourMapY nil")
-                        if tMapInfo.neighbourMap[nextDirX] ~= nil then
-                            table.insert(path, { map = tostring(start), path = tostring(nextDirX) })
-                            lastDir = nil
-                            findNextMove(tMapInfo.neighbourMap[nextDirX], dest)
-                        else
-                            Print("Obstacle sur le chemin le plus rapide Y")
-                            local nextDir, nextMap = obstacleEncountered(tMapInfo.neighbourMap)
-                            table.insert(path, { map = tostring(start), path = tostring(nextDir) })
-                            lastDir = nextDir
-                            findNextMove(nextMap, dest)
-                        end
-                    end
+                        Print("Obstacle", "PF_LoadMove", "error")
+                    end                
                 end
+            elseif startX ~= destX then
+                PF_PushMap(start, translateDir(nextDirX))
+                if mapInfo[nextDirX] ~= nil then
+                    start = mapInfo[nextDirX]
+                elseif mapInfo[nextDirY] ~= nil then
+                    start = mapInfo[nextDirY]
+                else
+                    Print("Obstacle", "PF_LoadMove", "error")
+                end            
+            elseif startY ~= destY then
+                PF_PushMap(start, translateDir(nextDirY))
+                if mapInfo[nextDirY] ~= nil then
+                    start = mapInfo[nextDirY]
+                elseif mapInfo[nextDirX] ~= nil then
+                    start = mapInfo[nextDirX]
+                else
+                    Print("Obstacle", "PF_LoadMove", "error")
+                end 
             end
-        
-            for _, tArea in pairs(MAP_INFO) do
-                for _, tSubArea in pairs(tArea) do
-                    for kMapId, tMapInfo in pairs(tSubArea) do
-                        if kMapId == tostring(start) then
-                            if startX ~= destX and startY ~= destY then
-                                local rnd = Get_RandomNumber(0,1)
-                                if rnd > 0 then
-                                    getMove("x", tMapInfo)
-                                else
-                                    getMove("y", tMapInfo)
-                                end
-                            elseif startX ~= destX then
-                                getMove("x", tMapInfo)
-                            elseif startY ~= destY then
-                                getMove("y", tMapInfo)
-                            end
-
-                        end
-                    end
-                end
-            end
+            --Print(start)
         end
 
-        findNextMove(start, dest)
+        --Dump(PF_Info.loadedPath, 250)
     end
+end
+
+function PF_PushMap(map, dir)
+    table.insert(PF_Info.loadedPath, { map = map, path = dir })
 end
 
 function PF_MapIdToPos(mapId)
-    for _, tArea in pairs(MAP_INFO) do
-        for _, tSubArea in pairs(tArea) do
-            for kMapId, tMapInfo in pairs(tSubArea) do
-                if kMapId == tostring(mapId) then
-                    return tMapInfo.x, tMapInfo.y
-                end
-            end
-        end
-    end
+    local mapInfo = ReadMapInfo(mapId)
 
-    Print("Impossible de retourner une pos", "PF_MapIdToPos", "error")
+    return mapInfo.posX, mapInfo.posY
 end
+
+-- Lecture map json
+
+function ReadMapInfo(mapId)
+    local file = io.open(AnkatouchDirectory.."\\PF_Maps\\"..mapId..".json", "r")
+    local json_text = file:read("*all")
+    file:close()
+    return JSON.decode(json_text)
+end
+
 
 -- Utilitaire
 
@@ -250,214 +225,3 @@ function OppositeDirection(dir)
     end
     return ""
 end
-
-MAP_INFO = {
-    ["Incarnam"] = {
-        ["Prairie"] = {
-            ["80216064"] = {
-                mapId = 80216064,
-                pos = "0,-1",
-                x = 0,
-                y = -1,
-                neighbourMap = {
-                    ["left"] = nil,
-                    ["right"] = 80216576,
-                    ["top"] = nil,
-                    ["bottom"] = 80216065
-                }
-            },
-            ["80216576"] = {
-                mapId = 80216576,
-                pos = "1,-1",
-                x = 1,
-                y = -1,
-                neighbourMap = {
-                    ["left"] = 80216064,
-                    ["right"] = 80217088,
-                    ["top"] = nil,
-                    ["bottom"] = 80216577
-                }
-            },
-            ["80217088"] = {
-                mapId = 80217088,
-                pos = "2,-1",
-                x = 2,
-                y = -1,
-                neighbourMap = {
-                    ["left"] = 80216576,
-                    ["right"] = nil,
-                    ["top"] = nil,
-                    ["bottom"] = 80217089
-                }
-            },
-            ["80347649"] = {
-                mapId = 80347649,
-                pos = "-1,0",
-                x = -1,
-                y = 0,
-                neighbourMap = {
-                    ["left"] = nil,
-                    ["right"] = nil,
-                    ["top"] = nil,
-                    ["bottom"] = 80347650
-                }
-            },
-            ["80216065"] = {
-                mapId = 80216065,
-                pos = "0,0",
-                x = 0,
-                y = 0,
-                neighbourMap = {
-                    ["left"] = nil,
-                    ["right"] = 80216577,
-                    ["top"] = 80216064,
-                    ["bottom"] = 80216066
-                }
-            },
-            ["80216577"] = {
-                mapId = 80216577,
-                pos = "1,0",
-                x = 1,
-                y = 0,
-                neighbourMap = {
-                    ["left"] = 80216065,
-                    ["right"] = 80217089,
-                    ["top"] = 80216576,
-                    ["bottom"] = 80216578
-                }
-            },
-            ["80217089"] = {
-                mapId = 80217089,
-                pos = "2,0",
-                x = 2,
-                y = 0,
-                neighbourMap = {
-                    ["left"] = 80216577,
-                    ["right"] = nil,
-                    ["top"] = 80217088,
-                    ["bottom"] = 80217090
-                }
-            },
-            ["80347650"] = {
-                mapId = 80347650,
-                pos = "-1,1",
-                x = -1,
-                y = 1,
-                neighbourMap = {
-                    ["left"] = nil,
-                    ["right"] = 80216066,
-                    ["top"] = 80347649,
-                    ["bottom"] = 80347651
-                }
-            },
-            ["80216066"] = {
-                mapId = 80216066,
-                pos = "0,1",
-                x = 0,
-                y = 1,
-                neighbourMap = {
-                    ["left"] = 80347650,
-                    ["right"] = 80216578,
-                    ["top"] = 80216065,
-                    ["bottom"] = 80216067
-                }
-            },
-            ["80216578"] = {
-                mapId = 80216578,
-                pos = "1,1",
-                x = 1,
-                y = 1,
-                neighbourMap = {
-                    ["left"] = 80216066,
-                    ["right"] = 80217090,
-                    ["top"] = 80216577,
-                    ["bottom"] = 80216579
-                }
-            },
-            ["80217090"] = {
-                mapId = 80217090,
-                pos = "2,1",
-                x = 2,
-                y = 1,
-                neighbourMap = {
-                    ["left"] = 80216578,
-                    ["right"] = 80217602,
-                    ["top"] = 80217089,
-                    ["bottom"] = 80217091
-                }
-            },
-            ["80217602"] = {
-                mapId = 80217602,
-                pos = "3,1",
-                x = 3,
-                y = 1,
-                neighbourMap = {
-                    ["left"] = 80217090,
-                    ["right"] = 80218114,
-                    ["top"] = nil,
-                    ["bottom"] = 80217603
-                }
-            },
-            ["80347651"] = {
-                mapId = 80347651,
-                pos = "-1,2",
-                x = -1,
-                y = 2,
-                neighbourMap = {
-                    ["left"] = nil,
-                    ["right"] = 80216067,
-                    ["top"] = 80347650,
-                    ["bottom"] = nil
-                }
-            },
-            ["80216067"] = {
-                mapId = 80216067,
-                pos = "0,2",
-                x = 0,
-                y = 2,
-                neighbourMap = {
-                    ["left"] = 80347651,
-                    ["right"] = 80216579,
-                    ["top"] = 80216066,
-                    ["bottom"] = 80216068
-                }
-            },
-            ["80216579"] = {
-                mapId = 80216579,
-                pos = "1,2",
-                x = 1,
-                y = 2,
-                neighbourMap = {
-                    ["left"] = 80216067,
-                    ["right"] = 80217091,
-                    ["top"] = 80216578,
-                    ["bottom"] = 80216580
-                }
-            },
-            ["80217091"] = {
-                mapId = 80217091,
-                pos = "2,2",
-                x = 2,
-                y = 2,
-                neighbourMap = {
-                    ["left"] = 80216579,
-                    ["right"] = 80217603,
-                    ["top"] = 80217090,
-                    ["bottom"] = 80217092
-                }
-            },
-            ["80217603"] = {
-                mapId = 80217603,
-                pos = "3,2",
-                x = 3,
-                y = 2,
-                neighbourMap = {
-                    ["left"] = 80217091,
-                    ["right"] = 80218115,
-                    ["top"] = 80217602,
-                    ["bottom"] = 80217604
-                }
-            }
-        }
-    }
-}
