@@ -93,6 +93,35 @@ function PF_LoadPath(start, dest)
             end
         end
 
+        local function prePush(mapInfo, nextDirX, nextDirY, axe)
+            local nextMapX = ReadMapInfo(mapInfo[nextDirX])
+            local nextMapY = ReadMapInfo(mapInfo[nextDirY])
+
+            --Dump(mapInfo, 250)
+            if axe == "x" then
+                if mapInfo[nextDirX] ~= nil and nextMapX.outdoor then
+                    PF_PushMap(start, translateDir(nextDirX))
+                    return mapInfo[nextDirX]
+                elseif mapInfo[nextDirY] ~= nil and nextMapY.outdoor then
+                    PF_PushMap(start, translateDir(nextDirY))
+                    return mapInfo[nextDirY]
+                else
+                    Print("Obstacle", "PF_LoadMove", "error")
+                end
+            else
+                if mapInfo[nextDirY] ~= nil and nextMapY.outdoor then
+                    PF_PushMap(start, translateDir(nextDirY))
+                    return mapInfo[nextDirY]
+                elseif mapInfo[nextDirX] ~= nil and nextMapX.outdoor then
+                    PF_PushMap(start, translateDir(nextDirX))
+                    return mapInfo[nextDirX]
+                else
+                    Print("Obstacle", "PF_LoadMove", "error")
+                end 
+            end
+
+        end
+
         while start ~= dest do
             local mapInfo = ReadMapInfo(start)
             local nextDirX = getNextDir("x")
@@ -102,47 +131,19 @@ function PF_LoadPath(start, dest)
 
             if startX ~= destX and startY ~= destY then
                 if Get_RandomNumber(0, 1) > 0 then -- x
-                    PF_PushMap(start, translateDir(nextDirX))
-                    if mapInfo[nextDirX] ~= nil then
-                        start = mapInfo[nextDirX]
-                    elseif mapInfo[nextDirY] ~= nil then
-                        start = mapInfo[nextDirY]
-                    else
-                        Print("Obstacle", "PF_LoadMove", "error")
-                    end
+                    start = prePush(mapInfo, nextDirX, nextDirY, "x")
                 else -- y
-                    PF_PushMap(start, translateDir(nextDirY))
-                    if mapInfo[nextDirY] ~= nil then
-                        start = mapInfo[nextDirY]
-                    elseif mapInfo[nextDirX] ~= nil then
-                        start = mapInfo[nextDirX]
-                    else
-                        Print("Obstacle", "PF_LoadMove", "error")
-                    end                
+                    start = prePush(mapInfo, nextDirX, nextDirY, "y")              
                 end
             elseif startX ~= destX then
-                PF_PushMap(start, translateDir(nextDirX))
-                if mapInfo[nextDirX] ~= nil then
-                    start = mapInfo[nextDirX]
-                elseif mapInfo[nextDirY] ~= nil then
-                    start = mapInfo[nextDirY]
-                else
-                    Print("Obstacle", "PF_LoadMove", "error")
-                end            
+                start = prePush(mapInfo, nextDirX, nextDirY, "x")           
             elseif startY ~= destY then
-                PF_PushMap(start, translateDir(nextDirY))
-                if mapInfo[nextDirY] ~= nil then
-                    start = mapInfo[nextDirY]
-                elseif mapInfo[nextDirX] ~= nil then
-                    start = mapInfo[nextDirX]
-                else
-                    Print("Obstacle", "PF_LoadMove", "error")
-                end 
+                start = prePush(mapInfo, nextDirX, nextDirY, "y")               
             end
-            --Print(start)
+            Print(start)
         end
 
-        --Dump(PF_Info.loadedPath, 250)
+        Dump(PF_Info.loadedPath, 250)
     end
 end
 
@@ -159,10 +160,13 @@ end
 -- Lecture map json
 
 function ReadMapInfo(mapId)
-    local file = io.open(AnkatouchDirectory.."\\PF_Maps\\"..mapId..".json", "r")
-    local json_text = file:read("*all")
-    file:close()
-    return JSON.decode(json_text)
+    if mapId ~= nil then
+        local file = io.open(AnkatouchDirectory.."\\PF_Maps\\"..mapId..".json", "r")
+        local json_text = file:read("*all")
+        file:close()
+        return JSON.decode(json_text)
+    end
+    return nil
 end
 
 
