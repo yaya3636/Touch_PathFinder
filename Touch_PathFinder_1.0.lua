@@ -8,12 +8,9 @@ PF_Info.loadedPath = {}
 -- Ankabot Main func
 
 function move()
-    if map:currentMapId() == 80216576 then
+    if map:currentMapId() == 84804104 then
         PF_Move()
-        PF_LoadPath(80347649)
-    elseif map:currentMapId() == 80347649 then
-        PF_Move()
-        PF_LoadPath(80216576)
+        PF_LoadPath(88084225)
     end
 
     return PF_Move()
@@ -61,7 +58,9 @@ function PF_LoadPath(start, dest)
         local memoryObstacle = {}
         local startX, startY = PF_MapIdToPos(start)
         local destX, destY = PF_MapIdToPos(dest)
+        local lastMap
         local lastDir
+        local lastAxe
         --Print(startX .. " " .. startY)
         --Print(destX .. " " .. destY)
 
@@ -93,6 +92,49 @@ function PF_LoadPath(start, dest)
             end
         end
 
+        local function obstacleEncountered(mapInfo)
+            local axe = ""
+
+            if lastAxe == "y" then
+                axe = "x"
+            else
+                axe = "y"
+            end
+
+            local tblDir = { 
+                ["x"] = {
+                    "leftNeighbourId",
+                    "rightNeighbourId"
+                },
+                ["y"] = {
+                    "topNeighbourId",
+                    "bottomNeighbourId"
+                }
+            }
+
+            local function searchDir()
+                for _, v in pairs(tblDir[axe]) do
+                    local nextMap = ReadMapInfo(mapInfo[v])
+                    if mapInfo[v] ~= nil and mapInfo[v] ~= lastMap and v ~= OppositeDirection(lastDir) and nextMap.outdoor then
+                        PF_PushMap(start, translateDir(v))
+                        lastDir = v
+                        lastAxe = axe
+                        return mapInfo[v]
+                    end
+                end
+
+                if axe == "y" then
+                    axe = "x"
+                else
+                    axe = "y"
+                end
+
+                return searchDir()
+            end
+
+            return searchDir()
+        end
+
         local function prePush(mapInfo, nextDirX, nextDirY, axe)
             local nextMapX = ReadMapInfo(mapInfo[nextDirX])
             local nextMapY = ReadMapInfo(mapInfo[nextDirY])
@@ -101,22 +143,30 @@ function PF_LoadPath(start, dest)
             if axe == "x" then
                 if mapInfo[nextDirX] ~= nil and nextMapX.outdoor then
                     PF_PushMap(start, translateDir(nextDirX))
+                    lastDir = nextDirX
+                    lastAxe = "x"
                     return mapInfo[nextDirX]
                 elseif mapInfo[nextDirY] ~= nil and nextMapY.outdoor then
                     PF_PushMap(start, translateDir(nextDirY))
+                    lastDir = nextDirY
+                    lastAxe = "y"
                     return mapInfo[nextDirY]
                 else
-                    Print("Obstacle", "PF_LoadMove", "error")
+                    return obstacleEncountered(mapInfo)
                 end
             else
                 if mapInfo[nextDirY] ~= nil and nextMapY.outdoor then
                     PF_PushMap(start, translateDir(nextDirY))
+                    lastDir = nextDirY
+                    lastAxe = "y"
                     return mapInfo[nextDirY]
                 elseif mapInfo[nextDirX] ~= nil and nextMapX.outdoor then
                     PF_PushMap(start, translateDir(nextDirX))
+                    lastDir = nextDirX
+                    lastAxe = "x"
                     return mapInfo[nextDirX]
                 else
-                    Print("Obstacle", "PF_LoadMove", "error")
+                    return obstacleEncountered(mapInfo)
                 end 
             end
 
@@ -140,6 +190,7 @@ function PF_LoadPath(start, dest)
             elseif startY ~= destY then
                 start = prePush(mapInfo, nextDirX, nextDirY, "y")               
             end
+            lastMap = start
             Print(start)
         end
 
@@ -218,14 +269,14 @@ end
 
 function OppositeDirection(dir)
     dir = dir or ""
-    if string.lower(dir) == "left" then
-        return "right"
-    elseif string.lower(dir) == "right" then
-        return "left"
-    elseif string.lower(dir) == "top" then
-        return "bottom"
-    elseif string.lower(dir) == "bottom" then
-        return "top"
+    if string.lower(dir) == "leftNeighbourId" then
+        return "rightNeighbourId"
+    elseif string.lower(dir) == "rightNeighbourId" then
+        return "leftNeighbourId"
+    elseif string.lower(dir) == "topNeighbourId" then
+        return "bottomNeighbourId"
+    elseif string.lower(dir) == "bottomNeighbourId" then
+        return "topNeighbourId"
     end
     return ""
 end
